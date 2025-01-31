@@ -158,7 +158,6 @@ class Snake(GameObject):
             pg.draw.rect(screen, self.body_color, rect)
             pg.draw.rect(screen, BORDER_COLOR, rect, 1)
 
-        # Отрисовываем голову
         head_rect = self.get_head_rect()
         pg.draw.rect(screen, self.body_color, head_rect)
         pg.draw.rect(screen, BORDER_COLOR, head_rect, 1)
@@ -182,7 +181,7 @@ def handle_keys(snake, speed, paused):
                 paused = not paused
             elif event.key == pg.K_PLUS or event.key == pg.K_EQUALS:
                 speed = min(speed + 1, MAX_SPEED)
-            elif event.key == pg.K_MINUS:  # Уменьшение скорости
+            elif event.key == pg.K_MINUS:
                 speed = max(speed - 1, MIN_SPEED)
             else:
                 new_direction = DIRECTION_MAP.get(
@@ -194,9 +193,9 @@ def handle_keys(snake, speed, paused):
 
 def update_window_title(speed, max_length, paused):
     """Обновляет заголовок окна с информацией о скорости и рекордной длине."""
-    title = f"Змейка: Скорость - {speed}, Рекорд - {max_length}"
+    title = f'Змейка: Скорость - {speed}, Рекорд - {max_length}'
     if paused:
-        title += " (Пауза)"
+        title += ' (Пауза)'
     pg.display.set_caption(title)
 
 
