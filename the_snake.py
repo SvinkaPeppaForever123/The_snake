@@ -130,14 +130,12 @@ class Snake(GameObject):
 
     def move(self):
         """Двигает змейку в текущем направлении."""
-        print(self.positions, self.last)
         self.positions.insert(0, self.get_new_head_position())
         self.last = (
             self.positions.pop()
             if len(self.positions) > self.length
             else None
         )
-        print(self.positions, self.last)
 
     def draw(self):
         """Отрисовывает змейку."""
