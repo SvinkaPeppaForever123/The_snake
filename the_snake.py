@@ -58,7 +58,7 @@ pg.display.set_caption('Змейка | Скорость: +/- | Пауза: P')
 clock = pg.time.Clock()
 
 # Определение противоположных направлений
-OPPOSITE_DIRECTION = {UP: DOWN, DOWN: UP, LEFT: RIGHT, RIGHT: LEFT}
+DIRECTION_OPPOSITES = {UP: DOWN, DOWN: UP, LEFT: RIGHT, RIGHT: LEFT}
 
 
 class GameObject:
@@ -72,14 +72,14 @@ class GameObject:
         """Абстрактный метод для отрисовки объекта."""
         raise NotImplementedError(
             'Метод draw должен быть реализован '
-            f'в дочерних классах {type(self).__name__}'
+            f'в дочернем классе {type(self).__name__}'
         )
 
-    def draw_cell(self, position, color=None, erase=False):
+    def draw_cell(self, position, body_color=None):
         """Отрисовывает отдельную ячейку игрового объекта."""
         rect = pg.Rect(position, (GRID_SIZE, GRID_SIZE))
-        pg.draw.rect(screen, color or self.body_color, rect)
-        if not erase:
+        pg.draw.rect(screen, body_color or self.body_color, rect)
+        if (body_color or self.body_color) != BOARD_BACKGROUND_COLOR:
             pg.draw.rect(screen, BORDER_COLOR, rect, 1)
 
 
@@ -115,10 +115,10 @@ class Snake(GameObject):
 
     def update_direction(self, new_direction):
         """Обновляет направление движения змейки."""
-        if new_direction != OPPOSITE_DIRECTION[self.direction]:
+        if new_direction != DIRECTION_OPPOSITES[self.direction]:
             self.direction = new_direction
 
-    def get_head_position(self):
+    def calculate_next_head_position(self):
         """Вычисляет новую позицию головы змейки."""
         head_x, head_y = self.positions[0]
         dir_x, dir_y = self.direction
@@ -129,7 +129,7 @@ class Snake(GameObject):
 
     def move(self):
         """Двигает змейку в текущем направлении."""
-        self.positions.insert(0, self.get_head_position())
+        self.positions.insert(0, self.calculate_next_head_position())
         self.last = (
             self.positions.pop()
             if len(self.positions) > self.length
@@ -140,11 +140,13 @@ class Snake(GameObject):
         """Отрисовывает змейку на экране."""
         self.draw_cell(self.positions[0], self.body_color)
         if self.last:
-            self.draw_cell(self.last, BOARD_BACKGROUND_COLOR, erase=True)
+            self.draw_cell(self.last, BOARD_BACKGROUND_COLOR)
 
     def check_self_collision(self):
         """Проверяет, столкнулась ли змейка сама с собой."""
-        return self.length > 1 and self.positions[0] in self.positions[1:]
+        return self.length > 1 and (
+            self.calculate_next_head_position() in self.positions
+        )
 
 
 def handle_keys(snake, speed, paused):
