@@ -2,22 +2,24 @@
 Модуль для реализации игры 'Змейка'
 с использованием библиотеки pygame.
 """
+
 from random import choice
 
 import pygame as pg
 
-# Константы для размеров поля и сетки:
+# Константы размеров окна и сетки
 SCREEN_WIDTH, SCREEN_HEIGHT = 640, 480
 GRID_SIZE = 20
 GRID_WIDTH = SCREEN_WIDTH // GRID_SIZE
 GRID_HEIGHT = SCREEN_HEIGHT // GRID_SIZE
 
-# Направления движения:
+# Определение направлений движения змейки
 UP = (0, -1)
 DOWN = (0, 1)
 LEFT = (-1, 0)
 RIGHT = (1, 0)
-DIRECTION_MAP = {
+# Карта возможных изменений направлений движения змейки
+TURNS = {
     (UP, pg.K_LEFT): LEFT,
     (UP, pg.K_RIGHT): RIGHT,
     (DOWN, pg.K_LEFT): LEFT,
@@ -27,43 +29,42 @@ DIRECTION_MAP = {
     (RIGHT, pg.K_UP): UP,
     (RIGHT, pg.K_DOWN): DOWN,
 }
+# Начальная позиция змейки
 START_POSITION = (
     (GRID_WIDTH // 2) * GRID_SIZE,
     (GRID_HEIGHT // 2) * GRID_SIZE
 )
-
-# Цвета:
+# Определение цветов игры
 BOARD_BACKGROUND_COLOR = (192, 192, 192)
 BORDER_COLOR = (93, 216, 228)
 APPLE_COLOR = (255, 0, 0)
 SNAKE_COLOR = (0, 255, 0)
 BODY_COLOR = (0, 0, 0)
 
-# Начальная скорость движения змейки:
+# Настройки скорости игры
 INITIAL_SPEED = 10
 MIN_SPEED = 5
 MAX_SPEED = 20
 
-# Создаем множество всех возможных позиций на поле
+# Создание множества всех возможных позиций на игровом поле
 ALL_CELLS = {
     (x * GRID_SIZE, y * GRID_SIZE)
     for x in range(GRID_WIDTH) for y in range(GRID_HEIGHT)
 }
 
-# Настройка игрового окна:
-screen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
-pg.display.set_caption(
-    'Змейка: Управление -'
-    'Стрелки, Пауза - P, Скорость - +/-'
-)
+# Настройка игрового окна
+screen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pg.display.set_caption('Змейка | Скорость: +/- | Пауза: P')
 clock = pg.time.Clock()
+
+# Определение противоположных направлений
+OPPOSITE_DIRECTION = {UP: DOWN, DOWN: UP, LEFT: RIGHT, RIGHT: LEFT}
 
 
 class GameObject:
     """Базовый класс для игровых объектов."""
 
     def __init__(self, color=None):
-        """Инициализирует объект с заданным цветом и позицией."""
         self.position = START_POSITION
         self.body_color = color or BODY_COLOR
 
@@ -74,23 +75,23 @@ class GameObject:
             f'в дочерних классах {type(self).__name__}'
         )
 
-    def draw_cell(self, position, color=None):
-        """Отрисовка одной ячейки на экране."""
+    def draw_cell(self, position, color=None, erase=False):
+        """Отрисовывает отдельную ячейку игрового объекта."""
         rect = pg.Rect(position, (GRID_SIZE, GRID_SIZE))
-        pg.draw.rect(screen, self.body_color or color, rect)
-        pg.draw.rect(screen, BORDER_COLOR, rect, 1)
+        pg.draw.rect(screen, color or self.body_color, rect)
+        if not erase:
+            pg.draw.rect(screen, BORDER_COLOR, rect, 1)
 
 
 class Apple(GameObject):
     """Класс для яблока."""
 
     def __init__(self, occupied_positions=None, color=APPLE_COLOR):
-        """Инициализирует яблоко с случайной позицией."""
         super().__init__(color)
         self.randomize_position(occupied_positions or [])
 
     def randomize_position(self, occupied_positions):
-        """Устанавливает случайную позицию для яблока"""
+        """Устанавливает яблоко в случайную свободную позицию."""
         self.position = choice(tuple(ALL_CELLS - set(occupied_positions)))
 
     def draw(self):
@@ -102,7 +103,6 @@ class Snake(GameObject):
     """Класс для змейки."""
 
     def __init__(self, color=SNAKE_COLOR):
-        """Инициализирует змейку."""
         super().__init__(color)
         self.reset()
 
@@ -115,22 +115,21 @@ class Snake(GameObject):
 
     def update_direction(self, new_direction):
         """Обновляет направление движения змейки."""
-        opposite = {UP: DOWN, DOWN: UP, LEFT: RIGHT, RIGHT: LEFT}
-        if new_direction and new_direction != opposite[self.direction]:
+        if new_direction != OPPOSITE_DIRECTION[self.direction]:
             self.direction = new_direction
 
-    def get_new_head_position(self):
-        """Определяет, куда переместится голова змейки."""
+    def get_head_position(self):
+        """Вычисляет новую позицию головы змейки."""
+        head_x, head_y = self.positions[0]
+        dir_x, dir_y = self.direction
         return (
-            (self.positions[0][0] + self.direction[0] * GRID_SIZE)
-            % SCREEN_WIDTH,
-            (self.positions[0][1] + self.direction[1] * GRID_SIZE)
-            % SCREEN_HEIGHT
+            (head_x + dir_x * GRID_SIZE) % SCREEN_WIDTH,
+            (head_y + dir_y * GRID_SIZE) % SCREEN_HEIGHT
         )
 
     def move(self):
         """Двигает змейку в текущем направлении."""
-        self.positions.insert(0, self.get_new_head_position())
+        self.positions.insert(0, self.get_head_position())
         self.last = (
             self.positions.pop()
             if len(self.positions) > self.length
@@ -138,33 +137,14 @@ class Snake(GameObject):
         )
 
     def draw(self):
-        """Отрисовывает змейку."""
-        head_rect = pg.Rect(self.positions[0], (GRID_SIZE, GRID_SIZE))
-        pg.draw.rect(screen, self.body_color, head_rect)  # Рисуем голову
-        pg.draw.rect(screen, BORDER_COLOR, head_rect, 1)  # Рисуем границу
-
+        """Отрисовывает змейку на экране."""
+        self.draw_cell(self.positions[0], self.body_color)
         if self.last:
-            erase_rect = pg.Rect(self.last, (GRID_SIZE, GRID_SIZE))
-            pg.draw.rect(screen, BOARD_BACKGROUND_COLOR, erase_rect)
-            # Убираем границу, чтобы не оставался след:
-            pg.draw.rect(screen, BOARD_BACKGROUND_COLOR, erase_rect, 1)
-
-    def get_head_position(self):
-        """Возвращает позицию головы змейки."""
-        return self.positions[0]
+            self.draw_cell(self.last, BOARD_BACKGROUND_COLOR, erase=True)
 
     def check_self_collision(self):
-        """Проверяет, не укусила ли змея сама себя."""
-        if (self.length > 1 and self.get_head_position() in
-                self.positions[1:]):
-            self.reset()
-            return True
-
-
-def quit_game():
-    """Завершается игра."""
-    pg.quit()
-    raise SystemExit
+        """Проверяет, столкнулась ли змейка сама с собой."""
+        return self.length > 1 and self.positions[0] in self.positions[1:]
 
 
 def handle_keys(snake, speed, paused):
@@ -174,7 +154,8 @@ def handle_keys(snake, speed, paused):
             event.type == pg.QUIT
             or (event.type == pg.KEYDOWN and event.key == pg.K_ESCAPE)
         ):
-            quit_game()
+            pg.quit()
+            raise SystemExit
         if event.type == pg.KEYDOWN:
             if event.key == pg.K_p:
                 paused = not paused
@@ -184,20 +165,12 @@ def handle_keys(snake, speed, paused):
                 speed = max(speed - 1, MIN_SPEED)
             else:
                 snake.update_direction(
-                    DIRECTION_MAP.get(
+                    TURNS.get(
                         (snake.direction, event.key),
                         snake.direction
                     )
                 )
     return speed, paused
-
-
-def update_window_title(speed, max_length, paused):
-    """Обновляет заголовок окна с информацией о скорости и рекордной длине."""
-    title = f'Змейка: Скорость - {speed}, Рекорд - {max_length}'
-    if paused:
-        title += ' (Пауза)'
-    pg.display.set_caption(title)
 
 
 def main():
@@ -211,26 +184,25 @@ def main():
     screen.fill(BOARD_BACKGROUND_COLOR)
 
     while True:
+        speed, paused = handle_keys(snake, speed, paused)
         if not paused:
             clock.tick(speed)
-            speed, paused = handle_keys(snake, speed, paused)
             snake.move()
 
             if snake.check_self_collision():
-                apple = Apple(snake.positions)
+                snake.reset()
+                apple.randomize_position(snake.positions)
+                screen.fill(BOARD_BACKGROUND_COLOR)
 
-            if snake.get_head_position() == apple.position:
+            elif snake.positions[0] == apple.position:
                 snake.length += 1
                 max_length = max(snake.length, max_length)
                 apple.randomize_position(snake.positions)
 
             snake.draw()
             apple.draw()
-            update_window_title(speed, max_length, paused)
-            pg.display.update()
-        else:
-            speed, paused = handle_keys(snake, speed, paused)
-            update_window_title(speed, max_length, paused)
+        pg.display.update()
+        if paused:
             pg.time.wait(100)
 
 
