@@ -120,7 +120,7 @@ class Snake(GameObject):
 
     def calculate_next_head_position(self):
         """Вычисляет новую позицию головы змейки."""
-        head_x, head_y = self.positions[0]
+        head_x, head_y = self.get_head_position()
         dir_x, dir_y = self.direction
         return (
             (head_x + dir_x * GRID_SIZE) % SCREEN_WIDTH,
@@ -138,9 +138,13 @@ class Snake(GameObject):
 
     def draw(self):
         """Отрисовывает змейку на экране."""
-        self.draw_cell(self.positions[0], self.body_color)
+        self.draw_cell(self.get_head_position(), self.body_color)
         if self.last:
             self.draw_cell(self.last, BOARD_BACKGROUND_COLOR)
+
+    def get_head_position(self):
+        """Возвращает позицию головы змейки."""
+        return self.positions[0]
 
     def check_self_collision(self):
         """Проверяет, столкнулась ли змейка сама с собой."""
@@ -196,7 +200,7 @@ def main():
                 apple.randomize_position(snake.positions)
                 screen.fill(BOARD_BACKGROUND_COLOR)
 
-            elif snake.positions[0] == apple.position:
+            elif snake.get_head_position() == apple.position:
                 snake.length += 1
                 max_length = max(snake.length, max_length)
                 apple.randomize_position(snake.positions)
